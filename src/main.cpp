@@ -12,14 +12,14 @@
 
 Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC);
 
-#define ECHO_PIN 3
-#define TRIG_PIN 5
+#define ECHO_PIN 7
+#define TRIG_PIN 8
 
 const float BETA = 3950; // Coeficiente Beta do termistor
 const float GAMMA = 0.7;
 const float RL10 = 50;
 
-#define DHTPIN 4         // Pino conectado ao sensor DHT22
+#define DHTPIN 2         // Pino conectado ao sensor DHT22
 #define DHTTYPE DHT22    // Define o tipo do sensor DHT
 
 DHT dht(DHTPIN, DHTTYPE);
