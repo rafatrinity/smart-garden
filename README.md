@@ -2,6 +2,9 @@
 
 ## Project Name: Smart Garden
 
+#### [Click here to visit the Smart Garden project on Wokwi](https://wokwi.com/projects/398913098629206017 "Visit the Smart Garden project on Wokwi")
+
+
 ### Project Overview:
 The Smart Garden project aims to create a self-sustaining and automated gardening system that monitors and optimizes plant growth conditions. This system utilizes various sensors and actuators to provide real-time data and control over environmental factors such as temperature, humidity, light intensity, and soil moisture.
 ![Smart Garden System](assets/image.png)
