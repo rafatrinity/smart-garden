@@ -8,35 +8,55 @@
 #include <Fonts/FreeMonoBold9pt7b.h>
 #include <math.h>
 
+
 #define TFT_DC 9
 #define TFT_CS 10
 
 #define WIDTH 240
 #define HEIGHT 320
 
-Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC);
 
 #define ECHO_PIN 7
 #define TRIG_PIN 8
+
+#define DHTPIN 2         // Pino conectado ao sensor DHT22
+#define DHTTYPE DHT22    // Define o tipo do sensor DHT
+
+Servo myservo;  // Cria uma instância do Servo
+#define SERVO_PIN 6
+
+#define TEXT_START_X 150
+#define TEXT_START_Y 30
+#define TEXT_GAP 30
+#define GRAPH_START_X 10
+#define GRAPH_START_Y 300
+#define GRAPH_WIDTH 20
+#define GRAPH_HEIGHT 100
 
 const float BETA = 3950; // Coeficiente Beta do termistor
 const float GAMMA = 0.7;
 const float RL10 = 50;
 
-#define DHTPIN 2         // Pino conectado ao sensor DHT22
-#define DHTTYPE DHT22    // Define o tipo do sensor DHT
+struct Previous {
+    double temperature;
+    double humidity;
+    double distance;
+    double lightIntensity;
+};
 
+struct Current {
+    double temperature;
+    double humidity;
+    double distance;
+    double lightIntensity;
+};
+
+// Inicializando uma instância da estrutura
+struct Previous previous;
+struct Current current;
+
+Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC);
 DHT dht(DHTPIN, DHTTYPE);
-
-Servo myservo;  // Cria uma instância do Servo
-#define SERVO_PIN 6
-
-// const uint8_t sun_icon [] PROGMEM = {
-//   0x00, 0x00, 0x18, 0x00, 0x00, 0x00, 0x00, 0x7E,
-//   0x18, 0x7E, 0x00, 0x00, 0x18, 0x18, 0xFF, 0x18,
-//   0x18, 0x00, 0x7E, 0x18, 0x7E, 0x00, 0x00, 0x00,
-//   0x18, 0x00, 0x00, 0x00, 0x00
-// };
 
 void setup() {
   Serial.begin(115200);
@@ -53,11 +73,11 @@ void setup() {
 
   // Texto estático
   tft.setCursor(10, 30);
-  tft.print("Distancia: ");
-  tft.setCursor(10, 60);
   tft.print("Temp: ");
-  tft.setCursor(10, 90);
+  tft.setCursor(10, 60);
   tft.print("Humidade: ");
+  tft.setCursor(10, 90);
+  tft.print("Dist: ");
   tft.setCursor(10, 120);
   tft.print("Luz: ");
   
@@ -127,53 +147,61 @@ void drawBarGraph(int x, int y, int width, int height, float value, float max_va
   tft.fillRect(x + 1, y - barHeight, width - 2, barHeight, ILI9341_GREEN);
 }
 
-void displayData(float distance, float temperature, float humidity, int lightIntensity) {
+
+void updateText(double* previous_values[], double* current_values[], const char* names[]) {
   tft.setFont(&FreeMonoBold9pt7b); // Define a fonte para os valores
-  tft.setTextColor(ILI9341_WHITE); // Define a cor do texto como branco para escrever o texto novo
+  int cursor_position = 0;
 
-  // Exibe ícones junto com os valores
-  // tft.drawBitmap(10, 10, sun_icon, 16, 16, ILI9341_YELLOW);
+  for (int i = 0; i < 4; i++) {
+    cursor_position += TEXT_GAP;
+    tft.setCursor(TEXT_START_X, cursor_position);
+    
+    if(*current_values[i] != *previous_values[i]){
+    // Clear the area where the text is printed
+    tft.fillRect(TEXT_START_X, cursor_position - 20, 220, 30, ILI9341_BLACK);
+    
+    tft.setTextColor(ILI9341_WHITE);
+    tft.print(*current_values[i]);
+    tft.print(names[i]);
+    }
+  }
+}
 
-  clearTextArea(150, 10, 220, 30);
-  tft.setCursor(150, 30); // Define a posição do cursor para o valor da distância
-  tft.print(distance);
-  tft.print(" cm");
 
-  clearTextArea(150, 40, 220, 30);
-  tft.setCursor(150, 60); // Define a posição do cursor para o valor da temperatura
-  tft.print(temperature);
-  tft.print(" C");
+void drawBarGraphs() {
+  drawBarGraph(GRAPH_START_X, GRAPH_START_Y, GRAPH_WIDTH, GRAPH_HEIGHT, current.distance, 400); // Exemplo para distância
+  drawBarGraph(GRAPH_START_X + GRAPH_WIDTH, GRAPH_START_Y, GRAPH_WIDTH, GRAPH_HEIGHT, current.temperature + 20, 70); // Exemplo para temperatura
+  drawBarGraph(GRAPH_START_X + 2 * GRAPH_WIDTH, GRAPH_START_Y, GRAPH_WIDTH, GRAPH_HEIGHT, current.humidity, 100); // Exemplo para umidade
+  drawBarGraph(GRAPH_START_X + 3 * GRAPH_WIDTH, GRAPH_START_Y, GRAPH_WIDTH, GRAPH_HEIGHT, current.lightIntensity, 30000); // Exemplo para luz
+}
 
-  clearTextArea(150, 70, 220, 30);
-  tft.setCursor(150, 90); // Define a posição do cursor para o valor da humidade
-  tft.print(humidity);
-  tft.print(" %");
+void displayData() {
+  double* previous_values[] = { &previous.temperature, &previous.humidity, &previous.distance, &previous.lightIntensity };
+  double* current_values[] = { &current.temperature, &current.humidity, &current.distance, &current.lightIntensity };
+  const char* names[] = { " °C", " %", " Cm", " Lux" };
 
-  clearTextArea(150, 100, 220, 30);
-  tft.setCursor(150, 120); // Define a posição do cursor para o valor da luz
-  tft.print(lightIntensity);
-  tft.print(" lux");
-
-  // Desenha gráficos de barras
-  drawBarGraph(10, 300, 20, 100, distance, 400); // Exemplo para distância
-  drawBarGraph(40, 300, 20, 100, temperature + 20, 70); // Exemplo para temperatura
-  drawBarGraph(70, 300, 20, 100, humidity, 100); // Exemplo para umidade
-  drawBarGraph(100, 300, 20, 100, lightIntensity, 30000); // Exemplo para luz
+  updateText(previous_values, current_values, names);
+  drawBarGraphs();
 }
 
 void loop() {
-  float distance = readDistanceCM();
-  float temperature = readTemperature();
-  float humidity = readHumidity();
-  int lightIntensity = readLightIntensity();
+  current.temperature = readTemperature();
+  current.humidity = readHumidity();
+  current.distance = readDistanceCM();
+  current.lightIntensity = readLightIntensity();
 
-  displayData(distance, temperature, humidity, lightIntensity);
+  displayData();
 
-  if (distance >= 100) {
+  if (current.distance >= 100) {
     myservo.write(90);  // Gira o servo para 90°
   } else {
     myservo.write(0);   // Retorna o servo para 0°
   }
+
+  previous.temperature = current.temperature;
+  previous.humidity = current.humidity;
+  previous.distance = current.distance;
+  previous.lightIntensity = current.lightIntensity;
 
   delay(500);
 }
